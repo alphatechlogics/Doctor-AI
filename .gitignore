@@ -1,0 +1,60 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Environment files
+.env
+*.env
+
+# Virtual environments
+venv/
+env/
+.venv/
+.python-version
+
+# Streamlit specific
+.streamlit/
+
+# Logs
+*.log
+logs/
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# System files
+.DS_Store
+Thumbs.db
+*.bak
+*.swp
+
+# Dependencies
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Compiled files
+*.o
+*.a
+*.out
+*.class
+
+# Miscellaneous
+*.tmp
+*.temp
+*.old
+
+# OpenAI API key files (if any are stored)
+openai_api_key.txt
+
+# Uploads and generated files
+uploads/
+generated/
+
+# Ignore any secrets or sensitive files
+secrets.json
+config.json
