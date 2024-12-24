@@ -38,8 +38,8 @@ Welcome to the **Dermatology Chatbot**! This is an AI-powered Streamlit applicat
 
 ## Usage 🛠️
 
-1. Upload an Image: Drag and drop or select an image of the skin condition.
-2. Ask a Question: Type your question or message for the AI.
-3. Interact with the Chatbot: View responses and engage in follow-up discussions.
-4. Switch Chats: Use the sidebar to switch between different chat sessions or create a new one.
-5. Enjoy Real-Time Analysis: Responses are generated instantly for better user experience.
+1. **Upload an Image:** Drag and drop or select an image of the skin condition.
+2. **Ask a Question:** Type your question or message for the AI.
+3. **Interact with the Chatbot:** View responses and engage in follow-up discussions.
+4. **Switch Chats:** Use the sidebar to switch between different chat sessions or create a new one.
+5. **Enjoy Real-Time Analysis:** Responses are generated instantly for better user experience.
