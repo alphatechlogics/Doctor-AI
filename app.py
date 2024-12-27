@@ -1,223 +1,137 @@
 import streamlit as st
-import base64
-import json
 import openai
+import base64
+from dotenv import load_dotenv
+import os
+
+# ---------------- LOAD ENVIRONMENT VARIABLES ----------------
+load_dotenv()  # Load variables from .env file
 
 # ---------------- SETUP OPENAI ----------------
-# Replace with your actual OpenAI API key
-openai.api_key = "sk-"
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-MODEL_NAME = "gpt-4o-mini"  # Ensure this model name is correct and accessible
+if not openai.api_key:
+    st.error("OpenAI API key not found. Please set it in the .env file.")
+    st.stop()
+
+MODEL_NAME = "gpt-4o-mini"  # Replace with your actual model name
 
 # ---------------- UTILS ----------------
-def encode_image(image_bytes: bytes) -> str:
-    """
-    Convert raw bytes of an image into a base64-encoded string.
-    """
-    return base64.b64encode(image_bytes).decode("utf-8")
-
-def get_chat_history(chat_id: str) -> list:
-    """
-    Retrieve the conversation history for a given chat_id from session state.
-    If it doesn't exist, create an empty list.
-    """
-    if "chats" not in st.session_state:
-        st.session_state["chats"] = {}
-    
-    if chat_id not in st.session_state["chats"]:
-        st.session_state["chats"][chat_id] = []
-    
-    return st.session_state["chats"][chat_id]
-
-def add_message_to_chat_history(chat_id: str, role: str, content):
-    """
-    Append a message dict (role='user'/'assistant', content=any) to that chat's history.
-    """
-    st.session_state["chats"][chat_id].append({"role": role, "content": content})
-
-def build_openai_messages(chat_history: list) -> list:
-    """
-    Convert stored chat history into the 'messages' format expected by OpenAI's ChatCompletion API.
-    
-    User messages can include both text and images.
-    """
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are a dermatologist AI. Analyze the user's images and questions. "
-                "Provide a reasoned response and ask relevant follow-up questions. "
-                "Do not provide medical diagnosis, but guide the user responsibly."
-            )
-        }
-    ]
-    
-    for msg in chat_history:
-        role = msg["role"]
-        content = msg["content"]
-        
-        if isinstance(content, list):
-            # Convert list of content blocks to JSON string
-            str_content = json.dumps(content)
-        else:
-            # plain string
-            str_content = str(content)
-        
-        messages.append({"role": role, "content": str_content})
-    
-    return messages
+def encode_image(image):
+    """Encode the uploaded image to Base64."""
+    return base64.b64encode(image).decode("utf-8")
 
 # ---------------- MAIN APP ----------------
 def main():
-    st.set_page_config(page_title="Dermatology Chatbot", layout="wide")
-    st.title("Dermatology Chatbot (Image-based)")
+    st.set_page_config(page_title="Doctor AI", layout="wide")
+    st.title("Doctor AI")
 
-    # ---------------- SIDEBAR ----------------
-    st.sidebar.title("Chat Sessions")
+    # Initialize session state
+    if "analysis_complete" not in st.session_state:
+        st.session_state["analysis_complete"] = False
+    if "static_analysis" not in st.session_state:
+        st.session_state["static_analysis"] = None
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = []
 
-    # Initialize available chats
-    if "available_chats" not in st.session_state:
-        st.session_state["available_chats"] = ["Chat_1"]
-
-    # Select existing chat
-    selected_chat_id = st.sidebar.selectbox(
-        "Choose a chat session:",
-        options=st.session_state["available_chats"],
-    )
-
-    # Button to create a new chat
-    if st.sidebar.button("New Chat"):
-        new_id = f"Chat_{len(st.session_state['available_chats']) + 1}"
-        st.session_state["available_chats"].append(new_id)
-        selected_chat_id = new_id  # Switch to the new chat immediately
-
-    st.sidebar.markdown("---")
-    st.sidebar.write(f"**Current Chat:** {selected_chat_id}")
-
-    # ---------------- CONVERSATION HISTORY ----------------
-    chat_history = get_chat_history(selected_chat_id)
-
-    if chat_history:
-        st.markdown("### Conversation so far:")
-        for idx, msg in enumerate(chat_history):
-            role = msg["role"]
-            content = msg["content"]
-
-            if role == "user":
-                # Could be text or list of text+image
-                if isinstance(content, list):
-                    for item in content:
-                        if item.get("type") == "text":
-                            user_text = item.get("text", "")
-                            st.markdown(f"**You:** {user_text}")
-                        elif item.get("type") == "image_url":
-                            data_url = item.get("image_url", {}).get("url", "")
-                            if data_url.startswith("data:image"):
-                                try:
-                                    # Split the data URL to get MIME type and base64 string
-                                    mime_type, b64_str = data_url.split(";base64,")
-                                    image_data = base64.b64decode(b64_str)
-                                    st.image(image_data, caption="Your Uploaded Image", use_container_width=True)
-                                except Exception as e:
-                                    st.error(f"Image decode error: {e}")
-                else:
-                    st.markdown(f"**You:** {content}")
-
-            elif role == "assistant":
-                st.markdown(f"**Assistant:** {content}")
-
-            elif role == "system":
-                # Optionally display system messages
-                pass
-
-        st.markdown("---")
-
-    # ---------------- INPUT SECTION ----------------
-    # Initialize session state for uploaded image
-    if "uploaded_image_bytes" not in st.session_state:
-        st.session_state["uploaded_image_bytes"] = None
-    if "uploaded_image_mime" not in st.session_state:
-        st.session_state["uploaded_image_mime"] = "image/jpeg"  # default MIME type
-
+    # Image upload
     uploaded_image = st.file_uploader(
-        "Upload an image (jpg, jpeg, or png) of a skin disease:",
+        "Upload an image (jpg, jpeg, or png) of a skin condition:",
         type=["jpg", "jpeg", "png"],
-        accept_multiple_files=False
+        accept_multiple_files=False,
     )
 
-    # Display the uploaded image immediately below uploader
+    # Display uploaded image and perform analysis
     if uploaded_image:
-        image_bytes = uploaded_image.read()
-        st.session_state["uploaded_image_bytes"] = image_bytes
-        st.session_state["uploaded_image_mime"] = uploaded_image.type  # e.g., 'image/jpeg', 'image/png'
+        st.image(uploaded_image, caption="Uploaded Image", width=300)
 
-        try:
-            st.image(image_bytes, caption="Uploaded Image Preview", use_container_width=True)
-        except Exception as e:
-            st.error(f"Image display error: {e}")
+        # Perform static analysis if not already done
+        if not st.session_state["analysis_complete"]:
+            with st.spinner("Analyzing the image..."):
+                try:
+                    # Encode the image to Base64
+                    base64_image = encode_image(uploaded_image.read())
 
-    # Question input below the image
-    user_input = st.text_area("Your question or message to the dermatologist AI:", height=80)
+                    # Send request to OpenAI
+                    response = openai.chat.completions.create(
+                        model=MODEL_NAME,
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": """You are a professional dermatologist AI trained to assist users by analyzing images of skin conditions. When analyzing an image, provide a realistic and thorough response as follows:
+1. **Diagnosis**: Identify the most likely skin condition shown in the image. Be descriptive and include features like lesions, discoloration, or patterns that are visible. If there is uncertainty, provide your best assessment based on your training.
+2. **Danger Level**: Rate the condition on a scale of 1 to 5 (1 being not dangerous and 5 being potentially serious). Use this scale to help users understand the urgency of seeking professional care:
+   - **1**: Mild, non-serious conditions such as dry skin, minor rashes, or acne.
+   - **2**: Moderate conditions like mild eczema or rosacea that may require simple treatments.
+   - **3**: Conditions like infected acne or moderate dermatitis that may need medical attention if untreated.
+   - **4**: Serious conditions like severe infections, deep ulcers, or potentially cancerous lesions.
+   - **5**: Emergency conditions such as necrotizing fasciitis, advanced skin cancer, or severe burns that require immediate medical intervention.
 
-    # ---------------- SEND BUTTON ----------------
-    if st.button("Send"):
-        # Validate input
-        if not user_input.strip() and not st.session_state["uploaded_image_bytes"]:
-            st.warning("Please type a message or upload an image.")
-            st.stop()
+3. **Treatment Suggestions**: Provide tailored suggestions for topical treatments, oral medications, or other relevant advice. Include over-the-counter and prescription options, lifestyle changes, and preventative measures. If there is any uncertainty, suggest the user consult a dermatologist for further evaluation.
 
-        # Build user content
-        user_message_content = []
+4. **Disclaimer**: End your response with a clear disclaimer stating that your analysis is based solely on the image provided and does not replace professional medical advice. Encourage users to consult a licensed dermatologist for confirmation and a personalized treatment plan.
+
+Avoid saying "I cannot analyze this image" or giving generic responses. Act as a professional dermatologist would, providing meaningful guidance based on the image.""",
+                                    },
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                                    },
+                                ],
+                            }
+                        ],
+                        max_tokens=500,
+                        temperature=0.2,
+                    )
+                    static_analysis = response.choices[0].message.content.strip()
+                    st.session_state["static_analysis"] = static_analysis
+                    st.session_state["analysis_complete"] = True
+                    st.session_state["chat_history"].append(
+                        {"role": "assistant", "content": static_analysis}
+                    )
+                except Exception as e:
+                    st.error(f"Error analyzing image: {e}")
+
+    # Display static analysis below the image
+    if st.session_state["static_analysis"]:
+        st.markdown("### Analysis:")
+        st.markdown(st.session_state["static_analysis"])
+
+    # Follow-up question input
+    user_input = st.text_area(
+        "Your question or message to the Doctor AI:",
+        height=80,
+        disabled=not st.session_state["analysis_complete"],
+    )
+
+    if st.button("Send") and st.session_state["analysis_complete"]:
         if user_input.strip():
-            user_message_content.append({
-                "type": "text",
-                "text": user_input.strip()
-            })
-        if st.session_state["uploaded_image_bytes"]:
-            image_bytes = st.session_state["uploaded_image_bytes"]
-            mime_type = st.session_state["uploaded_image_mime"]
-            base64_str = encode_image(image_bytes)
-            user_message_content.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:{mime_type};base64,{base64_str}"}
-            })
+            # Add user query to chat history
+            st.session_state["chat_history"].append({"role": "user", "content": user_input.strip()})
 
-        # Add user's message to the chat history
-        add_message_to_chat_history(selected_chat_id, "user", user_message_content)
-
-        # Clear the uploaded image after sending to prevent re-sending the same image
-        st.session_state["uploaded_image_bytes"] = None
-        st.session_state["uploaded_image_mime"] = "image/jpeg"  # reset to default
-
-        # Build messages for OpenAI
-        messages_for_api = build_openai_messages(get_chat_history(selected_chat_id))
-
-        # Debug: Uncomment to see the messages sent to OpenAI
-        # st.write("Messages sent to OpenAI:", messages_for_api)
-
-        # Call OpenAI's ChatCompletion API
-        with st.spinner("Analyzing..."):
+            # Send follow-up query to OpenAI with context
             try:
-                response = openai.chat.completions.create(
-                    model=MODEL_NAME,
-                    messages=messages_for_api,
-                    max_tokens=300,
-                    temperature=0.1,
-                )
+                with st.spinner("Processing your query..."):
+                    response = openai.chat.completions.create(
+                        model=MODEL_NAME,
+                        messages=[
+                            {"role": "system", "content": "You are a dermatologist AI. Continue assisting the user based on the previous image analysis and their queries."},
+                        ] + st.session_state["chat_history"],  # Include full chat history
+                        max_tokens=500,
+                        temperature=0.2,
+                    )
+                    reply = response.choices[0].message.content.strip()
+
+                    # Add AI reply to chat history
+                    st.session_state["chat_history"].append({"role": "assistant", "content": reply})
+
+                    st.markdown("### Response:")
+                    st.markdown(reply)
             except Exception as e:
-                st.error(f"API Error: {e}")
-                st.stop()
-
-        # Extract assistant's reply
-        assistant_reply = response.choices[0].message.content if response.choices else "No response."
-
-        # Add assistant's reply to chat history
-        add_message_to_chat_history(selected_chat_id, "assistant", assistant_reply)
-
-        st.success("AI responded! Check above for the new message and image.")
-
-    # Streamlit automatically reruns after any widget interaction,
-    # so the updated conversation will be shown at the top.
+                st.error(f"Error processing query: {e}")
 
 if __name__ == "__main__":
     main()
