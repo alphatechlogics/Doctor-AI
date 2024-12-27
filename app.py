@@ -8,10 +8,10 @@ import os
 load_dotenv()  # Load variables from .env file
 
 # ---------------- SETUP OPENAI ----------------
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 if not openai.api_key:
-    st.error("OpenAI API key not found. Please set it in the .env file.")
+    st.error("OpenAI API key not found. Please set it in Streamlit Cloud secrets.")
     st.stop()
 
 MODEL_NAME = "gpt-4o-mini"  # Replace with your actual model name
