@@ -1,45 +1,109 @@
-# Dermatology Chatbot (Image-based) 🩺📸
+# 🩺 Doctor AI
 
-Welcome to the **Dermatology Chatbot**! This is an AI-powered Streamlit application designed to help analyze user-provided images and questions about skin conditions. The bot offers responsible guidance based on your input while adhering to ethical standards—no medical diagnosis, just helpful insights. 🌟
+Doctor AI is an intelligent tool for diagnosing skin conditions from images and providing follow-up recommendations through a conversational interface. This project includes a **Streamlit** app for end-user interaction and a **FastAPI** backend for programmatic access.
 
-## Features 🎯
+---
 
-- **Image Upload**: Upload images (JPG, JPEG, PNG) for analysis.
-- **Interactive Chat**: Communicate with a dermatologist AI for personalized guidance.
-- **Multi-Session Support**: Manage multiple chat sessions seamlessly.
-- **Real-Time Responses**: Get instant feedback and follow-up questions.
+## ✨ Features
 
-## Installation 🚀
+- 🖼️ **Image-based Diagnosis**: Upload an image of a skin condition to receive an AI-powered diagnosis and treatment suggestions.
+- 💬 **Interactive Chat**: Ask follow-up questions based on the diagnosis or previous chat history.
+- 🖥️ **Streamlit Frontend**: A user-friendly interface for image uploads and interactive conversations.
+- 🌐 **FastAPI Backend**: A REST API to integrate diagnosis and chat functionality into other applications.
 
-1. Clone the repository:
+---
 
-   ```bash
-   git clone https://github.com/alphatechlogics/Doctor-AI.git
-   cd dermatology-chatbot
-   ```
+## 🛠️ Technologies
 
-2. **Install dependencies:**
+- 🐍 **Python**
+- 🌈 **Streamlit**: Frontend interface.
+- ⚡ **FastAPI**: Backend API service.
+- 🤖 **OpenAI GPT-4**: Core AI model for image analysis and conversational replies.
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+---
 
-3. **Set up your OpenAI API key: Replace "sk-" with your actual API key in the code:**
+## ✅ Prerequisites
 
-   ```bash
-   openai.api_key = "sk-your-api-key"
-   ```
+1. Python 3.7 or higher.
+2. An OpenAI API key.
 
-4. **Run the application:**
+---
 
-   ```bash
-   streamlit run app.py
-   ```
+## 🚀 Setup Instructions
 
-## Usage 🛠️
+### 1. Clone the Repository
 
-1. **Upload an Image:** Drag and drop or select an image of the skin condition.
-2. **Ask a Question:** Type your question or message for the AI.
-3. **Interact with the Chatbot:** View responses and engage in follow-up discussions.
-4. **Switch Chats:** Use the sidebar to switch between different chat sessions or create a new one.
-5. **Enjoy Real-Time Analysis:** Responses are generated instantly for better user experience.
+```bash
+git clone https://github.com/your-repo/doctor-ai.git
+cd doctor-ai
+```
+
+### 2. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Set up Secrets
+
+- For Streamlit:
+
+Create a secrets.toml file in the .streamlit directory:
+
+```bash
+OPENAI_API_KEY = "your-openai-api-key"
+```
+
+- For FastAPI:
+  Set up the OPENAI_API_KEY using Streamlit secrets (already integrated into the code).
+
+## 📖 Usage
+
+### 1. Run the Streamlit App
+
+- Start the app:
+
+```bash
+streamlit run app.py
+```
+
+### 2. Access the app at http://localhost:8501.
+
+- Run the FastAPI Backend Start the API server:
+
+```bash
+uvicorn api:app --reload
+```
+
+- Access the API documentation at http://127.0.0.1:8000/docs.
+
+## 🔗 API Endpoints
+
+### 1. /analyze_and_chat (POST)
+
+- Description: Diagnose a skin condition and/or respond to a follow-up query.
+- Parameters:
+  - 📂 file: Image file for diagnosis (optional).
+  - ❓ user_query: Follow-up question (optional).
+  - 📝 chat_history: Previous conversation history as JSON string (optional).
+- Response:
+
+```bash
+{
+  "diagnosis": "string",
+  "reply": "string",
+  "chat_history": [{"role": "user/assistant", "content": "string"}]
+}
+```
+
+- Example Request:
+
+```bash
+curl -X POST \
+  'http://127.0.0.1:8000/analyze_and_chat' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@path_to_image.jpg' \
+  -F 'user_query=What should I do now?' \
+  -F 'chat_history=[{"role": "assistant", "content": "Your diagnosis is..."}, {"role": "user", "content": "What does this mean?"}]'
+```
